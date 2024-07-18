@@ -1,0 +1,69 @@
+version: "3.1"
+services:
+  mariadb: # Simplified name
+    image: mariadb:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: WordPress
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql # Named volume for data persistence
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - docker-network
+  
+  phpmyadmin: 
+    image: phpmyadmin:5
+    restart: unless-stopped
+    ports:
+      - 8080:80 # Exposed port
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mariadb # Link to the MariaDB container
+    networks:
+      - docker-network
+  
+  wordpress:
+    ports:
+      - 80:80   
+    image: wordpress:php8.1-apache
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: ${MYSQL_USER} # Environment variable
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD} # Environment variable
+      WORDPRESS_DB_NAME: WordPress
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+    volumes:
+      - ./www:/var/www/html # Mount your WordPress files
+      - ./install-woocommerce.sh:/usr/local/bin/install-woocommerce.sh
+      - ./wordpress-custom.conf:/etc/apache2/conf-available/wordpress-custom.conf
+      - ./generate-apache-config.sh:/usr/local/bin/generate-apache-config.sh
+    networks:
+      - docker-network
+    entrypoint: >
+      /bin/sh -c '
+      /usr/local/bin/generate-apache-config.sh &&
+      docker-entrypoint.sh apache2-foreground &
+      sleep 30 &&
+      curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar &&
+      chmod +x wp-cli.phar &&
+      mv wp-cli.phar /usr/local/bin/wp &&
+      if [ ! -f /var/www/html/.woocommerce_script_run ]; then
+        /usr/local/bin/install-woocommerce.sh
+      else
+        echo "WooCommerce setup script has already run."
+      fi &&
+      a2enconf wordpress-custom &&
+      apache2ctl graceful &&      
+      tail -f /dev/null
+      '
+
+networks:
+  docker-network:
+    driver: bridge
+
+volumes:
+  mariadb-data: # Volume for MariaDB data
