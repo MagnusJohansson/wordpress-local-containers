@@ -1,6 +1,7 @@
 # Local WordPress with WooCommerce Development Environment
 
 This repository provides a convenient way to set up a local development environment for WordPress with WooCommerce using Docker and Docker Compose.
+It includes the installation of the WP-CLI which then is used to install the WooCommerce plugin.
 
 ## Introduction
 
@@ -38,13 +39,21 @@ MYSQL_USER=wordpress_user
 MYSQL_PASSWORD=your_strong_password
 ```
 
-### 3. Start the Environment
+### 3. Set file permissions
+Make sure that the .sh files have executing permissions:
+```bash
+chmod +x install-woocommerce.sh
+chmod +x generate-apache-config.sh
+chmod +x fix-permissions.sh
+```
+
+### 4. Start the Environment
 
 ```bash
 docker-compose up -d
 ```
 
-### 4. Access the Websites
+### 5. Access the Websites
 
 - WordPress: http://localhost
 - phpMyAdmin: http://localhost:8080
@@ -52,7 +61,7 @@ docker-compose up -d
 In phpMyAdmin, use the server name "mariadb", username "root", and the password you set in the .env file (MYSQL_ROOT_PASSWORD).
 ![alt text](./images/php-admin.png "phpMyAdmin login")
 
-## Additional Notes
+### 6. Additional Notes
 - ***Data Persistence:***: The MariaDB (MySQL) data is stored in a named Docker volume (mariadb-data), so it will persist even if you stop or remove the containers.
 - ***Customization:*** Feel free to modify the docker-compose.yml file to suit your specific needs, such as changing ports or using different Docker images.
 - ***Security:*** Remember to keep your database credentials secure and avoid exposing phpMyAdmin to the public internet.
@@ -87,7 +96,11 @@ Look for this entry `WooCommerce installation complete` in the Wordpress contain
 ```
 
 ## How to remove the MariaDb volume and start fresh?
-Stop the containers first, delete the MariaDb instance and then run the following command to remove the MariaDB volume:
+Stop the containers first:
+```bash
+docker-compose down
+```
+then delete the MariaDb instance and then run the following command to remove the MariaDB volume:
 ```bash
 docker volume rm wordpress-local-containers_mariadb-data
 ```
